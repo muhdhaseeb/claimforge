@@ -1,0 +1,770 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8"/>
+<meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+<title>ClaimForge™ — Patent Claim Drafter</title>
+<link href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:ital,wght@0,400;0,600;0,700;1,400&family=DM+Mono:wght@300;400;500&family=Syne:wght@400;700;800&display=swap" rel="stylesheet"/>
+<style>
+:root {
+  --navy: #0a0f1e;
+  --navy-mid: #111827;
+  --navy-light: #1a2540;
+  --gold: #c9a84c;
+  --gold-light: #e8c97a;
+  --gold-dim: #7a6230;
+  --cream: #f5f0e8;
+  --text: #d4cfc4;
+  --text-dim: #6a6860;
+  --border: rgba(201,168,76,0.18);
+  --border-strong: rgba(201,168,76,0.5);
+}
+*, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+html { scroll-behavior: smooth; }
+body {
+  font-family: 'Syne', sans-serif;
+  background: var(--navy);
+  color: var(--text);
+  min-height: 100vh;
+  overflow-x: hidden;
+}
+body::before {
+  content: '';
+  position: fixed; inset: 0; z-index: 0;
+  background:
+    radial-gradient(ellipse 80% 50% at 50% -5%, rgba(201,168,76,0.09) 0%, transparent 60%),
+    radial-gradient(ellipse 40% 40% at 90% 85%, rgba(201,168,76,0.05) 0%, transparent 60%),
+    repeating-linear-gradient(0deg, transparent, transparent 79px, rgba(201,168,76,0.018) 80px),
+    repeating-linear-gradient(90deg, transparent, transparent 79px, rgba(201,168,76,0.018) 80px);
+  pointer-events: none;
+}
+::-webkit-scrollbar { width: 6px; }
+::-webkit-scrollbar-track { background: var(--navy); }
+::-webkit-scrollbar-thumb { background: var(--gold-dim); border-radius: 3px; }
+.app { position: relative; z-index: 1; max-width: 860px; margin: 0 auto; padding: 0 28px 100px; }
+
+/* HEADER */
+header { text-align: center; padding: 60px 0 44px; animation: fadeDown 0.7s ease both; }
+.logo-row { display: inline-flex; align-items: center; gap: 14px; margin-bottom: 18px; }
+.anvil { width: 44px; height: 44px; filter: drop-shadow(0 0 14px rgba(201,168,76,0.7)); }
+.brand { font-family: 'Cormorant Garamond', serif; font-size: 2.6rem; font-weight: 700; color: var(--gold-light); letter-spacing: 0.04em; }
+.brand sup { font-size: 0.45em; vertical-align: super; color: var(--gold-dim); }
+.tagline { font-family: 'DM Mono', monospace; font-size: 0.78rem; color: var(--text-dim); letter-spacing: 0.18em; text-transform: uppercase; }
+.gold-rule { width: 120px; height: 1px; background: linear-gradient(90deg, transparent, var(--gold), transparent); margin: 22px auto 0; }
+
+/* PROGRESS */
+.progress-bar { display: flex; align-items: center; justify-content: center; gap: 0; margin: 0 auto 48px; max-width: 460px; animation: fadeUp 0.6s 0.2s ease both; }
+.step-node { display: flex; flex-direction: column; align-items: center; gap: 6px; flex: 1; }
+.step-circle { width: 34px; height: 34px; border-radius: 50%; border: 1.5px solid var(--border); display: flex; align-items: center; justify-content: center; font-family: 'DM Mono', monospace; font-size: 0.72rem; color: var(--text-dim); background: var(--navy-mid); transition: all 0.4s ease; position: relative; z-index: 1; }
+.step-circle.active { border-color: var(--gold); color: var(--gold); box-shadow: 0 0 18px rgba(201,168,76,0.35); background: rgba(201,168,76,0.08); }
+.step-circle.done { border-color: var(--gold-dim); background: rgba(201,168,76,0.12); color: var(--gold); }
+.step-label { font-size: 0.62rem; color: var(--text-dim); letter-spacing: 0.1em; text-transform: uppercase; text-align: center; }
+.step-label.active { color: var(--gold-light); }
+.step-connector { height: 1px; flex: 1; background: var(--border); margin-bottom: 20px; max-width: 60px; }
+.step-connector.done { background: var(--gold-dim); }
+
+/* CARD */
+.card { background: var(--navy-mid); border: 1px solid var(--border); border-radius: 12px; padding: 40px 44px; margin-bottom: 24px; position: relative; overflow: hidden; animation: fadeUp 0.5s ease both; }
+.card::before { content: ''; position: absolute; top: 0; left: 0; right: 0; height: 1px; background: linear-gradient(90deg, transparent, rgba(201,168,76,0.4), transparent); }
+.card-title { font-family: 'Cormorant Garamond', serif; font-size: 1.6rem; font-weight: 600; color: var(--gold-light); margin-bottom: 6px; }
+.card-sub { font-family: 'DM Mono', monospace; font-size: 0.72rem; color: var(--text-dim); letter-spacing: 0.12em; text-transform: uppercase; margin-bottom: 28px; }
+
+/* FORM */
+.field { margin-bottom: 24px; }
+.field label { display: block; font-size: 0.78rem; font-weight: 700; color: var(--gold); letter-spacing: 0.1em; text-transform: uppercase; margin-bottom: 6px; }
+.field .hint { font-family: 'DM Mono', monospace; font-size: 0.7rem; color: var(--text-dim); margin-bottom: 8px; line-height: 1.5; }
+.field input, .field textarea { width: 100%; background: rgba(10,15,30,0.6); border: 1px solid var(--border); border-radius: 7px; color: var(--cream); font-family: 'Syne', sans-serif; font-size: 0.88rem; padding: 12px 16px; transition: border-color 0.25s, box-shadow 0.25s; outline: none; resize: vertical; }
+.field input:focus, .field textarea:focus { border-color: var(--gold); box-shadow: 0 0 0 3px rgba(201,168,76,0.1); }
+.field textarea { min-height: 90px; line-height: 1.6; }
+.char-count { font-family: 'DM Mono', monospace; font-size: 0.65rem; color: var(--text-dim); text-align: right; margin-top: 4px; }
+
+/* BUTTONS */
+.btn-primary { display: inline-flex; align-items: center; gap: 10px; background: linear-gradient(135deg, var(--gold), #a07830); color: var(--navy); font-family: 'Syne', sans-serif; font-size: 0.85rem; font-weight: 800; letter-spacing: 0.12em; text-transform: uppercase; border: none; border-radius: 7px; padding: 14px 32px; cursor: pointer; transition: all 0.25s; position: relative; overflow: hidden; }
+.btn-primary:hover { transform: translateY(-1px); box-shadow: 0 8px 28px rgba(201,168,76,0.35); }
+.btn-primary:active { transform: translateY(0); }
+.btn-secondary { display: inline-flex; align-items: center; gap: 8px; background: transparent; color: var(--text-dim); font-family: 'Syne', sans-serif; font-size: 0.8rem; font-weight: 700; letter-spacing: 0.08em; text-transform: uppercase; border: 1px solid var(--border); border-radius: 7px; padding: 12px 24px; cursor: pointer; transition: all 0.25s; }
+.btn-secondary:hover { border-color: var(--gold-dim); color: var(--text); }
+.btn-row { display: flex; gap: 12px; align-items: center; margin-top: 8px; }
+
+/* CHIPS */
+.chips { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 4px; }
+.chip { padding: 6px 14px; border: 1px solid var(--border); border-radius: 20px; font-size: 0.75rem; color: var(--text-dim); cursor: pointer; transition: all 0.2s; user-select: none; }
+.chip:hover { border-color: var(--gold-dim); color: var(--text); }
+.chip.selected { border-color: var(--gold); color: var(--gold); background: rgba(201,168,76,0.08); }
+
+/* FORGE SCREEN */
+#forge-screen { display: none; text-align: center; padding: 80px 0; }
+#forge-screen.visible { display: block; }
+.forge-animation { margin: 0 auto 32px; position: relative; width: 80px; height: 80px; }
+.forge-ring { position: absolute; inset: 0; border-radius: 50%; border: 2px solid transparent; border-top-color: var(--gold); animation: spin 1s linear infinite; }
+.forge-ring:nth-child(2) { inset: 10px; border-top-color: var(--gold-dim); animation-duration: 1.4s; animation-direction: reverse; }
+.forge-center { position: absolute; inset: 22px; background: radial-gradient(circle, rgba(201,168,76,0.3), transparent); border-radius: 50%; animation: pulse 1.2s ease-in-out infinite; }
+.forge-title { font-family: 'Cormorant Garamond', serif; font-size: 1.8rem; color: var(--gold-light); margin-bottom: 8px; }
+.forge-status { font-family: 'DM Mono', monospace; font-size: 0.75rem; color: var(--text-dim); letter-spacing: 0.15em; }
+.forge-dots::after { content: ''; animation: dots 1.5s steps(4, end) infinite; }
+
+/* VAULT */
+#vault-screen { display: none; }
+#vault-screen.visible { display: block; }
+.vault-header { display: flex; align-items: flex-start; justify-content: space-between; margin-bottom: 28px; flex-wrap: wrap; gap: 12px; }
+.scope-meter { background: rgba(10,15,30,0.5); border: 1px solid var(--border); border-radius: 8px; padding: 12px 18px; min-width: 180px; }
+.scope-meter-label { font-family: 'DM Mono', monospace; font-size: 0.62rem; color: var(--text-dim); letter-spacing: 0.12em; text-transform: uppercase; margin-bottom: 8px; }
+.scope-track { height: 6px; background: var(--navy-light); border-radius: 3px; margin-bottom: 6px; overflow: hidden; }
+.scope-fill { height: 100%; border-radius: 3px; background: linear-gradient(90deg, var(--gold-dim), var(--gold)); width: 0%; transition: width 1s ease; }
+.scope-ends { display: flex; justify-content: space-between; font-family: 'DM Mono', monospace; font-size: 0.6rem; color: var(--text-dim); }
+
+.claims-doc { background: rgba(8,12,22,0.7); border: 1px solid var(--border); border-radius: 10px; padding: 36px 40px; margin-bottom: 24px; }
+.doc-header { font-family: 'DM Mono', monospace; font-size: 0.68rem; color: var(--text-dim); letter-spacing: 0.14em; text-transform: uppercase; border-bottom: 1px solid var(--border); padding-bottom: 14px; margin-bottom: 28px; }
+.claim-item { margin-bottom: 22px; }
+.claim-number { font-family: 'DM Mono', monospace; font-size: 0.7rem; color: var(--gold); letter-spacing: 0.1em; text-transform: uppercase; margin-bottom: 6px; display: flex; align-items: center; gap: 8px; }
+.claim-badge { font-size: 0.58rem; background: rgba(201,168,76,0.12); border: 1px solid var(--border); border-radius: 3px; padding: 1px 6px; color: var(--gold-dim); letter-spacing: 0.08em; }
+.claim-text { font-family: 'DM Mono', monospace; font-size: 0.82rem; color: var(--cream); line-height: 1.75; padding-left: 16px; border-left: 2px solid rgba(201,168,76,0.15); }
+.claim-text .legal-term { color: var(--gold-light); font-weight: 500; }
+.claim-divider { height: 1px; background: var(--border); margin: 22px 0; }
+.dependent { margin-left: 24px; }
+.dependent .claim-text { border-left-color: rgba(201,168,76,0.07); }
+
+.future-banner { background: rgba(201,168,76,0.04); border: 1px dashed rgba(201,168,76,0.2); border-radius: 8px; padding: 16px 20px; display: flex; align-items: center; gap: 14px; margin-bottom: 24px; }
+.future-badge { font-family: 'DM Mono', monospace; font-size: 0.6rem; color: var(--gold-dim); border: 1px solid var(--gold-dim); border-radius: 3px; padding: 2px 7px; letter-spacing: 0.1em; white-space: nowrap; }
+.future-text { font-family: 'DM Mono', monospace; font-size: 0.72rem; color: var(--text-dim); line-height: 1.5; }
+
+.action-row { display: flex; gap: 12px; flex-wrap: wrap; align-items: center; }
+.copy-btn { display: inline-flex; align-items: center; gap: 8px; background: transparent; color: var(--gold); font-family: 'Syne', sans-serif; font-size: 0.78rem; font-weight: 700; letter-spacing: 0.1em; text-transform: uppercase; border: 1px solid var(--border-strong); border-radius: 7px; padding: 11px 22px; cursor: pointer; transition: all 0.25s; }
+.copy-btn:hover { background: rgba(201,168,76,0.08); box-shadow: 0 0 18px rgba(201,168,76,0.15); }
+.copy-btn.copied { color: #6fcf97; border-color: #6fcf97; }
+.restart-btn { display: inline-flex; align-items: center; gap: 8px; background: transparent; color: var(--text-dim); font-family: 'Syne', sans-serif; font-size: 0.78rem; font-weight: 700; letter-spacing: 0.1em; text-transform: uppercase; border: 1px solid var(--border); border-radius: 7px; padding: 11px 22px; cursor: pointer; transition: all 0.25s; }
+.restart-btn:hover { color: var(--text); border-color: var(--text-dim); }
+
+.seal-wrap { text-align: center; padding: 20px 0 16px; font-family: 'DM Mono', monospace; font-size: 0.68rem; color: var(--text-dim); letter-spacing: 0.1em; }
+.seal-icon { width: 40px; height: 40px; background: radial-gradient(circle, rgba(201,168,76,0.25), rgba(201,168,76,0.05)); border: 1.5px solid var(--gold-dim); border-radius: 50%; margin: 0 auto 8px; display: flex; align-items: center; justify-content: center; font-size: 1.1rem; animation: sealPop 0.5s 0.3s cubic-bezier(0.34,1.56,0.64,1) both; }
+
+.hidden { display: none !important; }
+.visible { display: block !important; }
+
+.footer-note { text-align: center; font-family: 'DM Mono', monospace; font-size: 0.63rem; color: var(--text-dim); margin-top: 48px; line-height: 1.7; opacity: 0.6; }
+
+/* API KEY SCREEN */
+#apikey-screen { display: none; }
+#apikey-screen.visible { display: block; }
+.api-steps { margin: 20px 0 28px; padding: 0; list-style: none; counter-reset: steps; }
+.api-steps li { counter-increment: steps; display: flex; gap: 14px; align-items: flex-start; margin-bottom: 16px; font-family: 'DM Mono', monospace; font-size: 0.78rem; color: var(--text); line-height: 1.6; }
+.api-steps li::before { content: counter(steps); min-width: 24px; height: 24px; border-radius: 50%; background: rgba(201,168,76,0.12); border: 1px solid var(--gold-dim); color: var(--gold); font-size: 0.65rem; display: flex; align-items: center; justify-content: center; margin-top: 1px; flex-shrink: 0; }
+.api-steps a { color: var(--gold-light); text-decoration: underline; text-underline-offset: 3px; }
+.api-key-input-wrap { position: relative; }
+.api-key-input-wrap input { font-family: 'DM Mono', monospace; letter-spacing: 0.04em; padding-right: 48px; }
+.toggle-key-btn { position: absolute; right: 14px; top: 50%; transform: translateY(-50%); background: none; border: none; color: var(--text-dim); cursor: pointer; font-size: 0.9rem; padding: 4px; transition: color 0.2s; }
+.toggle-key-btn:hover { color: var(--gold); }
+.key-status { display: flex; align-items: center; gap: 8px; margin-top: 10px; font-family: 'DM Mono', monospace; font-size: 0.7rem; min-height: 20px; }
+.key-status.valid { color: #6fcf97; }
+.key-status.invalid { color: #e05252; }
+.key-status.checking { color: var(--text-dim); }
+.error-card { background: rgba(224,82,82,0.06); border: 1px solid rgba(224,82,82,0.3); border-radius: 8px; padding: 14px 18px; margin-bottom: 20px; font-family: 'DM Mono', monospace; font-size: 0.75rem; color: #e05252; line-height: 1.6; display: none; }
+.error-card.visible { display: block; }
+
+/* ANIMATIONS */
+@keyframes fadeDown { from { opacity:0; transform:translateY(-18px); } to { opacity:1; transform:translateY(0); } }
+@keyframes fadeUp { from { opacity:0; transform:translateY(18px); } to { opacity:1; transform:translateY(0); } }
+@keyframes spin { to { transform:rotate(360deg); } }
+@keyframes pulse { 0%,100% { opacity:0.4; transform:scale(0.9); } 50% { opacity:1; transform:scale(1.1); } }
+@keyframes dots { 0%{content:''} 25%{content:'.'} 50%{content:'..'} 75%{content:'...'} 100%{content:''} }
+@keyframes sealPop { from { opacity:0; transform:scale(0.3) rotate(-20deg); } to { opacity:1; transform:scale(1) rotate(0deg); } }
+</style>
+</head>
+<body>
+<div class="app">
+
+  <header>
+    <div class="logo-row">
+      <svg class="anvil" viewBox="0 0 48 48" fill="none">
+        <path d="M8 34h32l-3-10H11L8 34z" fill="#c9a84c" opacity="0.9"/>
+        <path d="M14 24V16a10 10 0 0120 0v8" stroke="#c9a84c" stroke-width="2" stroke-linecap="round"/>
+        <path d="M6 38h36" stroke="#c9a84c" stroke-width="2.5" stroke-linecap="round"/>
+        <path d="M10 42h28" stroke="#7a6230" stroke-width="2" stroke-linecap="round"/>
+        <circle cx="24" cy="16" r="3" fill="#e8c97a" opacity="0.8"/>
+      </svg>
+      <div class="brand">ClaimForge<sup>™</sup></div>
+    </div>
+    <div class="tagline">AI-Powered Patent Claim Drafter</div>
+    <div class="gold-rule"></div>
+  </header>
+
+  <div class="progress-bar" id="progress-bar">
+    <div class="step-node">
+      <div class="step-circle active" id="node-1">01</div>
+      <div class="step-label active" id="label-1">Invention</div>
+    </div>
+    <div class="step-connector" id="conn-1"></div>
+    <div class="step-node">
+      <div class="step-circle" id="node-2">02</div>
+      <div class="step-label" id="label-2">Components</div>
+    </div>
+    <div class="step-connector" id="conn-2"></div>
+    <div class="step-node">
+      <div class="step-circle" id="node-3">03</div>
+      <div class="step-label" id="label-3">Claims</div>
+    </div>
+  </div>
+
+  <!-- API KEY SCREEN -->
+  <div id="apikey-screen" class="visible">
+    <div class="card">
+      <div class="card-title">Connect Your AI</div>
+      <div class="card-sub">Free Groq API Key Required</div>
+      <ol class="api-steps">
+        <li>Go to <a href="https://console.groq.com/keys" target="_blank">console.groq.com/keys</a> and sign in with your Google account — one click, no credit card.</li>
+        <li>Click <strong>"Create API Key"</strong>, give it any name (e.g. <em>ClaimForge</em>), and click <strong>Submit</strong>.</li>
+        <li>Copy the key shown and paste it below. It stays in your browser only — never stored anywhere.</li>
+      </ol>
+      <div class="field">
+        <label>Groq API Key</label>
+        <div class="api-key-input-wrap">
+          <input type="password" id="api-key-input" placeholder="gsk_..." autocomplete="off" spellcheck="false"/>
+          <button class="toggle-key-btn" onclick="toggleKeyVisibility()" id="toggle-key-btn" title="Show/hide key">👁</button>
+        </div>
+        <div class="key-status" id="key-status"></div>
+      </div>
+      <div class="error-card" id="key-error"></div>
+      <div class="btn-row">
+        <button class="btn-primary" onclick="verifyAndProceed()">Verify Key & Continue →</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- STEP 1 -->
+
+  <div id="step-1">
+    <div class="card">
+      <div class="card-title">Describe Your Invention</div>
+      <div class="card-sub">Step 1 of 2 — Basic Information</div>
+      <div class="field">
+        <label>Invention Title</label>
+        <div class="hint">A short, descriptive name for what you invented.</div>
+        <input type="text" id="inv-title" placeholder="e.g. Self-Cooling Water Bottle with Solar Valve" maxlength="120"/>
+        <div class="char-count"><span id="title-count">0</span> / 120</div>
+      </div>
+      <div class="field">
+        <label>What Problem Does It Solve?</label>
+        <div class="hint">Describe the pain point your invention addresses.</div>
+        <textarea id="inv-problem" placeholder="e.g. Conventional water bottles provide no active cooling, causing beverages to reach ambient temperature within an hour..." maxlength="600"></textarea>
+        <div class="char-count"><span id="problem-count">0</span> / 600</div>
+      </div>
+      <div class="field">
+        <label>Technology Category</label>
+        <div class="hint">Select the field that best fits your invention.</div>
+        <div class="chips" id="category-chips">
+          <div class="chip" data-val="mechanical">⚙️ Mechanical</div>
+          <div class="chip" data-val="electrical">⚡ Electrical</div>
+          <div class="chip" data-val="software">💻 Software</div>
+          <div class="chip" data-val="biomedical">🧬 Biomedical</div>
+          <div class="chip" data-val="chemical">⚗️ Chemical</div>
+          <div class="chip" data-val="consumer">🛒 Consumer Product</div>
+          <div class="chip" data-val="agri">🌱 Agriculture</div>
+          <div class="chip" data-val="energy">🔋 Energy</div>
+        </div>
+      </div>
+      <div class="btn-row">
+        <button class="btn-primary" onclick="goStep2()">Continue →</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- STEP 2 -->
+  <div id="step-2" class="hidden">
+    <div class="card">
+      <div class="card-title">Key Components & Novelty</div>
+      <div class="card-sub">Step 2 of 2 — Technical Details</div>
+      <div class="field">
+        <label>Core Components</label>
+        <div class="hint">List the main physical or functional parts of your invention, separated by commas.</div>
+        <textarea id="inv-components" placeholder="e.g. thermoelectric cooling module, solar-charged micro-battery, pressure-sensitive valve, double-walled insulated chamber..." maxlength="600"></textarea>
+        <div class="char-count"><span id="comp-count">0</span> / 600</div>
+      </div>
+      <div class="field">
+        <label>What Makes It Novel?</label>
+        <div class="hint">What does your invention do that no existing product already does?</div>
+        <textarea id="inv-novel" placeholder="e.g. Unlike existing cooling bottles that rely on pre-frozen gel, this invention actively cools using harvested solar energy, requiring no external power source..." maxlength="600"></textarea>
+        <div class="char-count"><span id="novel-count">0</span> / 600</div>
+      </div>
+      <div class="field">
+        <label>How Many Claims to Generate?</label>
+        <div class="chips" id="claim-count-chips">
+          <div class="chip selected" data-val="3">3 Claims</div>
+          <div class="chip" data-val="5">5 Claims</div>
+          <div class="chip" data-val="7">7 Claims</div>
+        </div>
+      </div>
+      <div class="btn-row">
+        <button class="btn-primary" onclick="forgeIt()">⚒ Forge My Claims</button>
+        <button class="btn-secondary" onclick="goStep1()">← Back</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- FORGE SCREEN -->
+  <div id="forge-screen">
+    <div class="forge-animation">
+      <div class="forge-ring"></div>
+      <div class="forge-ring"></div>
+      <div class="forge-center"></div>
+    </div>
+    <div class="forge-title">Forging Your Claims</div>
+    <div class="forge-status" id="forge-status">Analyzing invention<span class="forge-dots"></span></div>
+  </div>
+
+  <!-- VAULT -->
+  <div id="vault-screen">
+    <div class="card">
+      <div class="vault-header">
+        <div>
+          <div class="card-title">Your Claim Vault</div>
+          <div class="card-sub">USPTO-Style Patent Claims — Ready to File</div>
+        </div>
+        <div class="scope-meter">
+          <div class="scope-meter-label">Claim Scope</div>
+          <div class="scope-track"><div class="scope-fill" id="scope-fill"></div></div>
+          <div class="scope-ends"><span>Narrow</span><span>Broad</span></div>
+        </div>
+      </div>
+
+      <div class="future-banner">
+        <div class="future-badge">Coming Soon</div>
+        <div class="future-text">Prior Art Search — Automatically cross-reference your claims against 12M+ USPTO patents to flag conflicts before you file.</div>
+      </div>
+
+      <div class="claims-doc">
+        <div class="doc-header" id="doc-header">PATENT CLAIMS — DRAFT</div>
+        <div id="claims-container"></div>
+      </div>
+
+      <div class="seal-wrap">
+        <div class="seal-icon">⚒</div>
+        <div>Forged by ClaimForge™ · For filing assistance consult a licensed patent attorney</div>
+      </div>
+
+      <div class="action-row">
+        <button class="copy-btn" id="copy-btn" onclick="copyClaims()">📋 Copy All Claims</button>
+        <button class="restart-btn" onclick="restart()">↺ Draft New Invention</button>
+      </div>
+    </div>
+  </div>
+
+  <div class="footer-note">
+    ClaimForge™ is an AI-assisted drafting tool and does not constitute legal advice.<br>
+    Always review generated claims with a licensed patent attorney before filing.
+  </div>
+</div>
+
+<script>
+let state = { title:'', problem:'', category:'', components:'', novel:'', claimCount:3 };
+let forgeInterval;
+let geminiApiKey = '';
+
+// ── CHAR COUNTERS ──
+function bindCounter(inputId, countId) {
+  const el = document.getElementById(inputId);
+  if (el) el.addEventListener('input', function() {
+    document.getElementById(countId).textContent = this.value.length;
+  });
+}
+bindCounter('inv-title','title-count');
+bindCounter('inv-problem','problem-count');
+bindCounter('inv-components','comp-count');
+bindCounter('inv-novel','novel-count');
+
+// ── CHIPS ──
+document.querySelectorAll('#category-chips .chip').forEach(c => {
+  c.addEventListener('click', () => {
+    document.querySelectorAll('#category-chips .chip').forEach(x => x.classList.remove('selected'));
+    c.classList.add('selected');
+    state.category = c.dataset.val;
+  });
+});
+document.querySelectorAll('#claim-count-chips .chip').forEach(c => {
+  c.addEventListener('click', () => {
+    document.querySelectorAll('#claim-count-chips .chip').forEach(x => x.classList.remove('selected'));
+    c.classList.add('selected');
+    state.claimCount = parseInt(c.dataset.val);
+  });
+});
+
+// ── SCREEN CONTROL ──
+const ALL_SCREENS = ['apikey-screen','step-1','step-2','forge-screen','vault-screen'];
+function show(id) {
+  const el = document.getElementById(id);
+  el.classList.remove('hidden');
+  el.classList.add('visible');
+}
+function hide(id) {
+  const el = document.getElementById(id);
+  el.classList.add('hidden');
+  el.classList.remove('visible');
+}
+function setStep(n) {
+  if (forgeInterval) { clearInterval(forgeInterval); forgeInterval = null; }
+  ALL_SCREENS.forEach(id => hide(id));
+  if (n === 'api')   show('apikey-screen');
+  else if (n === 1)  show('step-1');
+  else if (n === 2)  show('step-2');
+  else if (n === 'forge') show('forge-screen');
+  else if (n === 'vault') show('vault-screen');
+  if (n !== 'api') updateProgress(n);
+}
+
+function updateProgress(step) {
+  [1,2,3].forEach(n => {
+    const circle = document.getElementById('node-'+n);
+    circle.className = 'step-circle';
+    circle.textContent = '0'+n;
+    document.getElementById('label-'+n).className = 'step-label';
+  });
+  [1,2].forEach(n => document.getElementById('conn-'+n).className = 'step-connector');
+  function activate(n) { document.getElementById('node-'+n).classList.add('active'); document.getElementById('label-'+n).classList.add('active'); }
+  function markDone(n) {
+    document.getElementById('node-'+n).classList.add('done');
+    document.getElementById('node-'+n).textContent = '✓';
+    document.getElementById('label-'+n).classList.add('active');
+    const conn = document.getElementById('conn-'+n);
+    if (conn) conn.classList.add('done');
+  }
+  if (step === 1) { activate(1); }
+  else if (step === 2) { markDone(1); activate(2); }
+  else if (step === 'forge') { markDone(1); markDone(2); activate(3); }
+  else if (step === 'vault') { markDone(1); markDone(2); markDone(3); }
+}
+
+// ── API KEY SCREEN ──
+function toggleKeyVisibility() {
+  const input = document.getElementById('api-key-input');
+  const btn = document.getElementById('toggle-key-btn');
+  if (input.type === 'password') { input.type = 'text'; btn.textContent = '🙈'; }
+  else { input.type = 'password'; btn.textContent = '👁'; }
+}
+
+async function verifyAndProceed() {
+  const key = document.getElementById('api-key-input').value.trim();
+  const statusEl = document.getElementById('key-status');
+  const errorEl = document.getElementById('key-error');
+  errorEl.classList.remove('visible');
+
+  if (!key) {
+    statusEl.className = 'key-status invalid';
+    statusEl.textContent = '✗ Please enter your API key.';
+    return;
+  }
+  if (!key.startsWith('gsk_')) {
+    statusEl.className = 'key-status invalid';
+    statusEl.textContent = '✗ Groq keys start with "gsk_" — check your key.';
+    return;
+  }
+
+  statusEl.className = 'key-status checking';
+  statusEl.textContent = '⟳ Verifying key with Groq...';
+
+  try {
+    const res = await fetch('https://api.groq.com/openai/v1/chat/completions', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'Authorization': `Bearer ${key}`
+      },
+      body: JSON.stringify({
+        model: 'llama-3.3-70b-versatile',
+        messages: [{ role: 'user', content: 'Say only: OK' }],
+        max_completion_tokens: 5
+      })
+    });
+    if (res.ok) {
+      geminiApiKey = key;
+      statusEl.className = 'key-status valid';
+      statusEl.textContent = '✓ Key verified! Loading ClaimForge...';
+      setTimeout(() => setStep(1), 900);
+    } else {
+      const err = await res.json();
+      statusEl.className = 'key-status invalid';
+      statusEl.textContent = '✗ Key rejected by Groq.';
+      errorEl.textContent = `Error ${res.status}: ${err?.error?.message || 'Invalid API key. Please check and try again.'}`;
+      errorEl.classList.add('visible');
+    }
+  } catch(e) {
+    statusEl.className = 'key-status invalid';
+    statusEl.textContent = '✗ Network error.';
+    errorEl.textContent = 'Could not reach Groq. Check your internet connection and try again.';
+    errorEl.classList.add('visible');
+  }
+}
+
+// Allow Enter key on API key input
+document.getElementById('api-key-input').addEventListener('keydown', e => {
+  if (e.key === 'Enter') verifyAndProceed();
+});
+
+// ── NAVIGATION ──
+function goStep1() { setStep(1); }
+
+function goStep2() {
+  const title = document.getElementById('inv-title').value.trim();
+  const problem = document.getElementById('inv-problem').value.trim();
+  if (!title)   { highlight('inv-title');   return; }
+  if (!problem) { highlight('inv-problem'); return; }
+  state.title = title;
+  state.problem = problem;
+  setStep(2);
+}
+
+function highlight(id) {
+  const el = document.getElementById(id);
+  el.style.borderColor = '#e05252';
+  el.style.boxShadow = '0 0 0 3px rgba(224,82,82,0.15)';
+  el.focus();
+  setTimeout(() => { el.style.borderColor=''; el.style.boxShadow=''; }, 1400);
+}
+
+async function forgeIt() {
+  const comp  = document.getElementById('inv-components').value.trim();
+  const novel = document.getElementById('inv-novel').value.trim();
+  if (!comp)  { highlight('inv-components'); return; }
+  if (!novel) { highlight('inv-novel');      return; }
+  state.components = comp;
+  state.novel = novel;
+  const sel = document.querySelector('#claim-count-chips .chip.selected');
+  state.claimCount = sel ? parseInt(sel.dataset.val) : 3;
+  setStep('forge');
+
+  const msgs = [
+    'Consulting USPTO claim grammar',
+    'Analyzing novel claim elements',
+    'Structuring independent claim',
+    'Expanding dependent claims',
+    'Applying legal language patterns',
+    'Finalizing claim hierarchy',
+    'Running AI inference',
+  ];
+  let i = 0;
+  const statusEl = document.getElementById('forge-status');
+  forgeInterval = setInterval(() => {
+    i = (i + 1) % msgs.length;
+    statusEl.innerHTML = msgs[i] + '<span class="forge-dots"></span>';
+  }, 600);
+
+  try {
+    const claims = await generateClaimsWithGemini(state);
+    clearInterval(forgeInterval);
+    forgeInterval = null;
+    renderVault(claims);
+    setStep('vault');
+  } catch(err) {
+    clearInterval(forgeInterval);
+    forgeInterval = null;
+    statusEl.innerHTML = '✗ Generation failed. Retrying with fallback...';
+    setTimeout(() => {
+      renderVault(buildFallbackClaims(state));
+      setStep('vault');
+    }, 1200);
+  }
+}
+
+// ── GROQ API CALL ──
+async function generateClaimsWithGemini(s) {
+  const catLabel = {
+    mechanical:'Mechanical', electrical:'Electrical/Electronic', software:'Software/Computer',
+    biomedical:'Biomedical/Life Science', chemical:'Chemical', consumer:'Consumer Product',
+    agri:'Agricultural', energy:'Energy/Power'
+  }[s.category] || 'General';
+
+  const systemPrompt = `You are a senior USPTO patent attorney with 20 years of experience drafting patent claims. You write grammatically flawless, legally precise patent claims.
+
+ABSOLUTE GRAMMAR RULES — violating these is not permitted:
+1. NEVER write "is further comprising" — always write "further comprises"
+2. NEVER write "is comprising" — always write "comprises"
+3. NEVER write "is including" — always write "includes"
+4. Dependent claims use "wherein said X further comprises Y" or "further comprising Y" — never "is further comprising"
+5. Every claim is exactly one sentence ending with a period
+6. "said" must only refer to an element already introduced earlier in the same claim or a parent claim
+7. Independent claims introduce elements with "a" or "an" — never with "said" on first mention
+
+You always respond with valid JSON only — no explanations, no markdown fences, no preamble.`;
+
+  const userPrompt = `Draft exactly ${s.claimCount} patent claims for the invention below.
+
+INVENTION TITLE: ${s.title}
+TECHNOLOGY CATEGORY: ${catLabel}
+PROBLEM SOLVED: ${s.problem}
+CORE COMPONENTS: ${s.components}
+NOVEL ASPECTS: ${s.novel}
+
+CLAIM STRUCTURE REQUIREMENTS:
+1. Claim 1 — broad independent APPARATUS claim using open-ended "comprising" language; introduce ALL key components
+2. Claim 2 — dependent on Claim 1; narrow one structural aspect using "wherein said [component] further comprises..."
+3. Claim 3 — dependent on Claim 1; narrow a different structural or material aspect
+${s.claimCount >= 5 ? `4. Claim 4 — dependent on Claim 1; introduce an additional feature or sub-component using "further comprising"
+5. Claim 5 — independent METHOD claim; use "comprising: [verb]-ing..." structure` : ''}
+${s.claimCount >= 7 ? `6. Claim 6 — dependent on Claim 5; narrow one step of the method
+7. Claim 7 — dependent on Claim 5; add an additional method step using "further comprising"` : ''}
+
+LANGUAGE REQUIREMENTS:
+- Use: "comprising", "wherein", "operably coupled to", "configured to", "said", "further comprises", "plurality"
+- NEVER use: "is further comprising", "is comprising", "is including" — these are grammatically illegal in patent claims
+- Sensors: MONITOR or DETECT — never "receive parameters"
+- Actuators: PERFORM, EXECUTE, APPLY — never "monitor"
+- Controllers: REGULATE, MODULATE, ADJUST — never "activate"
+- Each dependent claim must cite its parent claim number explicitly
+- Do NOT apply generic polymer/alloy materials to electrical, software, or biomedical components
+
+OUTPUT FORMAT — respond ONLY with this JSON array, nothing else:
+[{"number":1,"type":"Independent","text":"A [title] comprising..."},{"number":2,"type":"Dependent","text":"The [title] of claim 1, wherein..."}]`;
+
+  const response = await fetch('https://api.groq.com/openai/v1/chat/completions', {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json',
+      'Authorization': `Bearer ${geminiApiKey}`
+    },
+    body: JSON.stringify({
+      model: 'llama-3.3-70b-versatile',
+      messages: [
+        { role: 'system', content: systemPrompt },
+        { role: 'user',   content: userPrompt   }
+      ],
+      max_completion_tokens: 2048,
+      temperature: 0.3
+    })
+  });
+
+  if (!response.ok) {
+    const err = await response.json();
+    throw new Error(err?.error?.message || 'Groq API error');
+  }
+
+  const data = await response.json();
+  const raw = data.choices?.[0]?.message?.content || '';
+
+  // Strip any accidental markdown fences
+  const cleaned = raw.replace(/```json|```/gi, '').trim();
+  const claims = JSON.parse(cleaned);
+
+  if (!Array.isArray(claims) || claims.length === 0) throw new Error('Invalid claims structure');
+  claims.forEach(c => { if (!c.number || !c.type || !c.text) throw new Error('Malformed claim object'); });
+
+  // Client-side grammar auto-fix — catches any slips the AI still makes
+  return claims.map(c => ({ ...c, text: fixClaimGrammar(c.text) }));
+}
+
+// ── GRAMMAR AUTO-FIX ──
+function fixClaimGrammar(text) {
+  return text
+    // Fix "is further comprising" → "further comprises"
+    .replace(/\bis further comprising\b/gi, 'further comprises')
+    // Fix "is comprising" → "comprises"
+    .replace(/\bis comprising\b/gi, 'comprises')
+    // Fix "is including" → "includes"
+    .replace(/\bis including\b/gi, 'includes')
+    // Fix "are comprising" → "comprise"
+    .replace(/\bare comprising\b/gi, 'comprise')
+    // Fix "is configured for receiving" → "is configured to receive"
+    .replace(/\bconfigured for (\w+ing)\b/gi, (_, v) => `configured to ${v.replace(/ing$/, '')}`)
+    // Fix double spaces
+    .replace(/  +/g, ' ')
+    // Ensure ends with period
+    .replace(/([^.])\s*$/, '$1.');
+}
+
+// ── SANITIZE ──
+function sanitize(str) {
+  return String(str).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
+}
+
+// ── HIGHLIGHT LEGAL TERMS ──
+function highlight_legal(text) {
+  const safe = sanitize(text);
+  const terms = [
+    'operably coupled to','operably connected to','electrically coupled to',
+    'communicatively coupled to','biologically interfacing with','selected from the group',
+    'further comprising','configured to','comprising','plurality','wherein','said'
+  ];
+  const pattern = new RegExp('(' + terms.map(t => t.replace(/[.*+?^${}()|[\]\\]/g,'\\$&')).join('|') + ')', 'gi');
+  return safe.replace(pattern, '<span class="legal-term">$1</span>');
+}
+
+// ── RENDER VAULT ──
+function renderVault(claims) {
+  document.getElementById('doc-header').textContent = 'PATENT CLAIMS — ' + state.title.toUpperCase() + ' — DRAFT';
+  const container = document.getElementById('claims-container');
+  container.innerHTML = '';
+  claims.forEach((claim, idx) => {
+    const div = document.createElement('div');
+    div.className = 'claim-item' + (claim.type === 'Dependent' ? ' dependent' : '');
+    div.innerHTML = `
+      <div class="claim-number">Claim ${sanitize(String(claim.number))} <span class="claim-badge">${sanitize(claim.type)}</span></div>
+      <div class="claim-text">${highlight_legal(claim.text)}</div>
+      ${idx < claims.length - 1 ? '<div class="claim-divider"></div>' : ''}
+    `;
+    container.appendChild(div);
+  });
+  const indCount = claims.filter(c => c.type === 'Independent').length;
+  const scopePct = Math.min(88, 38 + indCount * 18 + claims.length * 4);
+  setTimeout(() => { document.getElementById('scope-fill').style.width = scopePct + '%'; }, 400);
+}
+
+// ── FALLBACK (if Gemini fails) ──
+function buildFallbackClaims(s) {
+  const title = sanitize(s.title || 'the invention');
+  const parts = s.components.split(/,|;|\n/).map(c => sanitize(c.trim())).filter(Boolean);
+  const c1 = parts[0] || 'a primary functional unit';
+  const c2 = parts[1] || 'a secondary support structure';
+  const c3 = parts[2] || 'an interface mechanism';
+  const c4 = parts[3] || 'a control assembly';
+  const catVerb = { software:'communicatively coupled to', electrical:'electrically coupled to', mechanical:'operably connected to', biomedical:'biologically interfacing with', chemical:'chemically bonded to', consumer:'configured to interact with', agri:'adapted for use with', energy:'operably coupled to' }[s.category] || 'operably coupled to';
+  const claims = [];
+  claims.push({ number:1, type:'Independent', text:`A ${title.toLowerCase()} comprising: ${c1}, wherein said ${c1} is ${catVerb} ${c2}; ${c2}, configured to store and supply operational energy to said ${c1}; and ${c3}, operably coupled to both said ${c1} and said ${c2}, wherein said ${c3} is configured to monitor environmental conditions and communicate operational parameters to said ${c1}.` });
+  if (s.claimCount >= 3) {
+    claims.push({ number:2, type:'Dependent', text:`The ${title.toLowerCase()} of claim 1, wherein said ${c1} further comprises a plurality of independently operable sub-units, each configured to collectively perform the primary operational function of the device.` });
+    claims.push({ number:3, type:'Dependent', text:`The ${title.toLowerCase()} of claim 1, wherein said ${c3} is configured to sample operational parameters at a frequency of no less than once per second and transmit said parameters to said ${c1} via a dedicated signal pathway.` });
+  }
+  if (s.claimCount >= 5) {
+    claims.push({ number:4, type:'Dependent', text:`The ${title.toLowerCase()} of claim 1, further comprising ${c4}, operably coupled to said ${c3}, wherein said ${c4} is configured to receive monitored parameters from said ${c3} and modulate the output of said ${c1} without manual intervention.` });
+    claims.push({ number:5, type:'Independent', text:`A method of operating a ${title.toLowerCase()}, comprising: activating said ${c1} to initiate a primary operational cycle; monitoring, by said ${c3}, one or more environmental parameters in real-time; and adjusting, by said ${c4 || c1}, an operational output of said ${c1} based on said monitored parameters automatically.` });
+  }
+  if (s.claimCount >= 7) {
+    claims.push({ number:6, type:'Dependent', text:`The method of claim 5, wherein activating said ${c1} further comprises executing a pre-operational diagnostic sequence to verify functional integrity of all coupled components prior to initiating the primary operational cycle.` });
+    claims.push({ number:7, type:'Dependent', text:`The method of claim 5, further comprising transmitting, by said ${c3}, telemetry data comprising real-time performance metrics and fault condition indicators to an external monitoring system.` });
+  }
+  return claims;
+}
+
+// ── COPY ──
+function copyClaims() {
+  let text = 'PATENT CLAIMS — ' + state.title.toUpperCase() + '\nGenerated by ClaimForge™ (Powered by Groq / Llama 3.3)\n\n';
+  document.querySelectorAll('.claim-item').forEach(cl => {
+    const numEl = cl.querySelector('.claim-number');
+    const badgeEl = numEl.querySelector('.claim-badge');
+    const badgeText = badgeEl ? badgeEl.innerText : '';
+    const numText = numEl.innerText.replace(badgeText, '').trim();
+    const body = cl.querySelector('.claim-text').innerText;
+    text += numText + '\n' + body + '\n\n';
+  });
+  navigator.clipboard.writeText(text).then(() => {
+    const btn = document.getElementById('copy-btn');
+    btn.classList.add('copied');
+    btn.textContent = '✓ Copied to Clipboard!';
+    setTimeout(() => { btn.classList.remove('copied'); btn.textContent = '📋 Copy All Claims'; }, 2500);
+  }).catch(() => { alert('Copy failed. Please select the claims manually and copy with Ctrl+C.'); });
+}
+
+// ── RESTART ──
+function restart() {
+  state = { title:'', problem:'', category:'', components:'', novel:'', claimCount:3 };
+  ['inv-title','inv-problem','inv-components','inv-novel'].forEach(id => document.getElementById(id).value = '');
+  ['title-count','problem-count','comp-count','novel-count'].forEach(id => document.getElementById(id).textContent = '0');
+  document.querySelectorAll('#category-chips .chip').forEach(c => c.classList.remove('selected'));
+  document.querySelectorAll('#claim-count-chips .chip').forEach(c => c.classList.remove('selected'));
+  document.querySelector('#claim-count-chips .chip[data-val="3"]').classList.add('selected');
+  document.getElementById('scope-fill').style.width = '0%';
+  document.getElementById('claims-container').innerHTML = '';
+  setStep(1);
+}
+
+// ── INIT ──
+setStep('api');
+</script>
+</body>
+</html>
