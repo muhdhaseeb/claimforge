@@ -948,7 +948,8 @@ async function exportPDF() {
           y -= 4;
         }
         if (usptoLink) {
-          page.drawText(pdfSafe('Search Google Patents: ' + (conflict.usptoQuery||'')), { x:ML+10, y, font:fontMono, size:7.5, color:rgb(0.3,0.5,0.8) });
+          const linkText = pdfSafe(usptoLink.textContent || '').trim();
+          page.drawText(linkText, { x:ML+10, y, font:fontMono, size:7.5, color:rgb(0.3,0.5,0.8) });
           y -= 18;
         }
       }
