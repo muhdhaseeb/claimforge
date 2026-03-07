@@ -144,7 +144,9 @@ header { text-align: center; padding: 60px 0 44px; animation: fadeDown 0.7s ease
 .footer-note { text-align: center; font-family: 'DM Mono', monospace; font-size: 0.63rem; color: var(--text-dim); margin-top: 48px; line-height: 1.7; opacity: 0.6; }
 
 /* ── PRIOR ART SEARCH ── */
-.prior-art-section { background: rgba(10,15,30,0.5); border: 1px solid var(--border); border-radius: 10px; padding: 28px 32px; margin-bottom: 24px; }
+.pdf-btn { display:inline-flex; align-items:center; gap:7px; background:rgba(201,168,76,0.1); color:var(--gold-light); font-family:'Syne',sans-serif; font-size:0.78rem; font-weight:700; letter-spacing:0.1em; text-transform:uppercase; border:1px solid var(--border-strong); border-radius:7px; padding:11px 20px; cursor:pointer; transition:all 0.25s; }
+.pdf-btn:hover { background:rgba(201,168,76,0.2); box-shadow:0 0 20px rgba(201,168,76,0.25); }
+.pdf-btn:disabled { opacity:0.4; cursor:not-allowed; } border: 1px solid var(--border); border-radius: 10px; padding: 28px 32px; margin-bottom: 24px; }
 .prior-art-header { display: flex; flex-direction: column; gap: 4px; margin-bottom: 16px; }
 .prior-art-title { font-family: 'Cormorant Garamond', serif; font-size: 1.3rem; font-weight: 600; color: var(--gold-light); }
 .prior-art-sub { font-family: 'DM Mono', monospace; font-size: 0.65rem; color: var(--text-dim); letter-spacing: 0.12em; text-transform: uppercase; }
@@ -218,6 +220,7 @@ header { text-align: center; padding: 60px 0 44px; animation: fadeDown 0.7s ease
 @keyframes dots { 0%{content:''} 25%{content:'.'} 50%{content:'..'} 75%{content:'...'} 100%{content:''} }
 @keyframes sealPop { from { opacity:0; transform:scale(0.3) rotate(-20deg); } to { opacity:1; transform:scale(1) rotate(0deg); } }
 </style>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/pdf-lib/1.17.1/pdf-lib.min.js"></script>
 </head>
 <body>
 <div class="app">
@@ -407,6 +410,7 @@ header { text-align: center; padding: 60px 0 44px; animation: fadeDown 0.7s ease
 
       <div class="action-row">
         <button class="copy-btn" id="copy-btn" onclick="copyClaims()">📋 Copy All Claims</button>
+        <button class="pdf-btn" id="pdf-btn" onclick="exportPDF()">⬇ Export PDF</button>
         <button class="restart-btn" onclick="restart()">↺ Draft New Invention</button>
       </div>
     </div>
@@ -732,7 +736,265 @@ function fixClaimGrammar(text) {
     .replace(/([^.])\s*$/, '$1.');
 }
 
-// ── PRIOR ART SEARCH ──
+// ── PDF EXPORT ──
+async function exportPDF() {
+  const btn = document.getElementById('pdf-btn');
+  btn.disabled = true;
+  btn.textContent = '⏳ Generating...';
+
+  try {
+    const { PDFDocument, rgb, StandardFonts } = PDFLib;
+    const pdfDoc = await PDFDocument.create();
+
+    // Fonts
+    const fontRegular  = await pdfDoc.embedFont(StandardFonts.TimesRoman);
+    const fontBold     = await pdfDoc.embedFont(StandardFonts.TimesRomanBold);
+    const fontItalic   = await pdfDoc.embedFont(StandardFonts.TimesRomanItalic);
+    const fontMono     = await pdfDoc.embedFont(StandardFonts.Courier);
+
+    // Colors
+    const cNavy   = rgb(0.04, 0.06, 0.12);
+    const cGold   = rgb(0.79, 0.66, 0.30);
+    const cBlack  = rgb(0.10, 0.10, 0.10);
+    const cGray   = rgb(0.45, 0.45, 0.45);
+    const cLightG = rgb(0.92, 0.92, 0.92);
+
+    const PAGE_W = 612, PAGE_H = 792;
+    const ML = 72, MR = 72, MT = 72;
+    const contentW = PAGE_W - ML - MR;
+
+    let page = pdfDoc.addPage([PAGE_W, PAGE_H]);
+    let y = PAGE_H - MT;
+
+    // ── Helper: sanitize text for PDF (strip non-latin1 chars) ──
+    function pdfSafe(str) {
+      return (str || '').replace(/™/g, '(TM)').replace(/[^\x00-\xFF]/g, '');
+    }
+
+    // ── Helper: wrap text to lines ──
+    function wrapText(text, font, size, maxWidth) {
+      const words = text.split(' ');
+      const lines = [];
+      let line = '';
+      for (const word of words) {
+        const test = line ? line + ' ' + word : word;
+        if (font.widthOfTextAtSize(test, size) > maxWidth && line) {
+          lines.push(line);
+          line = word;
+        } else {
+          line = test;
+        }
+      }
+      if (line) lines.push(line);
+      return lines;
+    }
+
+    // ── Helper: draw text block, returns new Y ──
+    function drawText(pg, text, x, startY, font, size, color, maxWidth) {
+      const lines = wrapText(text, font, size, maxWidth);
+      let cy = startY;
+      for (const ln of lines) {
+        pg.drawText(ln, { x, y: cy, font, size, color });
+        cy -= size * 1.45;
+      }
+      return cy;
+    }
+
+    // ── Helper: add new page if needed ──
+    function checkPage(neededH) {
+      if (y - neededH < 72) {
+        page = pdfDoc.addPage([PAGE_W, PAGE_H]);
+        y = PAGE_H - MT;
+        drawPageFooter(page);
+      }
+    }
+
+    function drawPageFooter(pg) {
+      pg.drawLine({ start:{x:ML,y:52}, end:{x:PAGE_W-MR,y:52}, thickness:0.5, color:cGold });
+      pg.drawText('ClaimForge(TM) - AI-Assisted Patent Claim Drafter - For review by a licensed patent attorney before filing', {
+        x: ML, y: 36, font: fontRegular, size: 7, color: cGray
+      });
+      pg.drawText(`Generated: ${new Date().toLocaleDateString('en-US',{year:'numeric',month:'long',day:'numeric'})}`, {
+        x: PAGE_W - MR - 130, y: 36, font: fontRegular, size: 7, color: cGray
+      });
+    }
+
+    // ── PAGE 1: HEADER ──
+    // Navy header bar
+    page.drawRectangle({ x:0, y:PAGE_H-110, width:PAGE_W, height:110, color:cNavy });
+    page.drawLine({ start:{x:0,y:PAGE_H-110}, end:{x:PAGE_W,y:PAGE_H-110}, thickness:2, color:cGold });
+
+    page.drawText('CLAIMFORGE(TM)', { x:ML, y:PAGE_H-44, font:fontBold, size:22, color:cGold });
+    page.drawText('AI-Assisted Patent Claim Draft', { x:ML, y:PAGE_H-64, font:fontRegular, size:11, color:rgb(0.8,0.75,0.65) });
+    page.drawText('CONFIDENTIAL DRAFT - NOT FOR FILING', { x:ML, y:PAGE_H-84, font:fontMono, size:8, color:rgb(0.6,0.5,0.3) });
+
+    y = PAGE_H - 136;
+
+    // Invention title
+    page.drawText('PATENT CLAIMS', { x:ML, y, font:fontBold, size:10, color:cGold });
+    y -= 18;
+    const titleLines = wrapText(pdfSafe(state.title.toUpperCase()), fontBold, 18, contentW);
+    for (const ln of titleLines) {
+      page.drawText(ln, { x:ML, y, font:fontBold, size:18, color:cBlack });
+      y -= 26;
+    }
+    y -= 4;
+    page.drawLine({ start:{x:ML,y}, end:{x:PAGE_W-MR,y}, thickness:1, color:cGold });
+    y -= 20;
+
+    // Metadata block
+    const meta = [
+      ['Status',    'DRAFT — Attorney Review Required'],
+      ['Category',  state.category ? state.category.charAt(0).toUpperCase() + state.category.slice(1) : 'General'],
+      ['Claims',    `${state.claimCount} Claims Generated`],
+      ['Powered by','Groq / Llama 3.3 70B via ClaimForge(TM)'],
+    ];
+    for (const [label, val] of meta) {
+      page.drawText(label.toUpperCase() + ':', { x:ML, y, font:fontBold, size:8.5, color:cGray });
+      page.drawText(val, { x:ML+80, y, font:fontRegular, size:8.5, color:cBlack });
+      y -= 15;
+    }
+    y -= 16;
+    page.drawLine({ start:{x:ML,y}, end:{x:PAGE_W-MR,y}, thickness:0.5, color:cLightG });
+    y -= 22;
+
+    drawPageFooter(page);
+
+    // ── CLAIMS ──
+    page.drawText('PATENT CLAIMS', { x:ML, y, font:fontBold, size:13, color:cNavy });
+    y -= 22;
+
+    // Read claims from DOM
+    const claimEls = document.querySelectorAll('#claims-container .claim-item');
+    for (const el of claimEls) {
+      const numEl    = el.querySelector('.claim-number');
+      const typeEl   = el.querySelector('.claim-badge');
+      const textEl   = el.querySelector('.claim-text');
+      if (!numEl || !textEl) continue;
+
+      // claim-number contains "Claim X" — extract just the number
+      const badgeText  = typeEl ? typeEl.textContent.trim() : '';
+      const numRaw     = numEl.textContent.replace(badgeText, '').trim(); // "Claim 1"
+      const claimType  = badgeText; // "Independent" or "Dependent"
+      // Strip HTML tags to get plain text (innerText strips <span> legal-term tags)
+      const claimText  = textEl.innerText || textEl.textContent || '';
+
+      const isIndep = claimType.toLowerCase().includes('indep');
+      const indent  = isIndep ? ML : ML + 20;
+      const width   = isIndep ? contentW : contentW - 20;
+
+      checkPage(80);
+
+      // Claim number + type badge
+      page.drawText(numRaw, { x:indent, y, font:fontBold, size:10, color:cNavy });
+      if (claimType) {
+        page.drawText(claimType.toUpperCase(), {
+          x: indent + fontBold.widthOfTextAtSize(numRaw, 10) + 10,
+          y, font:fontBold, size:7.5, color: isIndep ? cGold : cGray
+        });
+      }
+      y -= 15;
+
+      // Claim text
+      const newY = drawText(page, pdfSafe(claimText.trim()), indent, y, fontRegular, 9.5, cBlack, width);
+      y = newY - 16;
+
+      checkPage(20);
+    }
+
+    // ── PRIOR ART SUMMARY (if run) ──
+    const paResults = document.getElementById('prior-art-results');
+    if (paResults && !paResults.classList.contains('hidden') && paResults.innerHTML.trim()) {
+      checkPage(60);
+      y -= 10;
+      page.drawLine({ start:{x:ML,y}, end:{x:PAGE_W-MR,y}, thickness:1, color:cGold });
+      y -= 22;
+      page.drawText('PRIOR ART SEARCH SUMMARY', { x:ML, y, font:fontBold, size:13, color:cNavy });
+      y -= 20;
+
+      // Risk level
+      const riskEl = paResults.querySelector('.risk-label');
+      const riskDesc = paResults.querySelector('.risk-desc');
+      if (riskEl) {
+        page.drawText(pdfSafe(riskEl.textContent.trim()), { x:ML, y, font:fontBold, size:10, color:cGold });
+        y -= 15;
+      }
+      if (riskDesc) {
+        y = drawText(page, pdfSafe(riskDesc.textContent.trim()), ML, y, fontItalic, 9.5, cGray, contentW);
+        y -= 12;
+      }
+
+      // Conflict cards
+      const cards = paResults.querySelectorAll('.conflict-card');
+      for (const card of cards) {
+        checkPage(70);
+        const area = card.querySelector('.conflict-area');
+        const sev  = card.querySelector('.conflict-severity');
+        const reason = card.querySelector('.conflict-reason');
+        const usptoLink = card.querySelector('.uspto-link');
+
+        if (area) {
+          page.drawText(pdfSafe(area.textContent || '').trim(), { x:ML, y, font:fontBold, size:9.5, color:cBlack });
+          if (sev) {
+            page.drawText(pdfSafe(sev.textContent||'').trim(), {
+              x: ML + fontBold.widthOfTextAtSize(pdfSafe(area.textContent||'').trim(), 9.5) + 10,
+              y, font:fontBold, size:7.5, color:cGold
+            });
+          }
+          y -= 14;
+        }
+        if (reason) {
+          y = drawText(page, pdfSafe(reason.textContent||'').trim(), ML+10, y, fontRegular, 8.5, cGray, contentW-10);
+          y -= 4;
+        }
+        if (usptoLink) {
+          page.drawText(pdfSafe('Search Google Patents: ' + (conflict.usptoQuery||'')), { x:ML+10, y, font:fontMono, size:7.5, color:rgb(0.3,0.5,0.8) });
+          y -= 18;
+        }
+      }
+    }
+
+    // ── DISCLAIMER PAGE ──
+    page = pdfDoc.addPage([PAGE_W, PAGE_H]);
+    drawPageFooter(page);
+    page.drawRectangle({ x:0, y:PAGE_H-80, width:PAGE_W, height:80, color:cNavy });
+    page.drawText('LEGAL DISCLAIMER', { x:ML, y:PAGE_H-44, font:fontBold, size:16, color:cGold });
+    page.drawLine({ start:{x:0,y:PAGE_H-80}, end:{x:PAGE_W,y:PAGE_H-80}, thickness:2, color:cGold });
+
+    const disclaimer = pdfSafe(`This document was generated by ClaimForge(TM), an AI-assisted patent claim drafting tool. The claims contained herein are a first draft intended for review and refinement by a licensed patent attorney or registered patent agent. This document does not constitute legal advice and should not be filed with the USPTO or any patent office without professional review. ClaimForge(TM) and its operators make no representations or warranties regarding the patentability, novelty, or non-obviousness of any claims herein. Prior art analysis, where included, is AI-generated and does not constitute a formal professional patent search.`);
+
+    let dy = PAGE_H - 120;
+    dy = drawText(page, disclaimer, ML, dy, fontRegular, 10.5, cBlack, contentW);
+
+    // Save & download
+    const pdfBytes = await pdfDoc.save();
+    const blob = new Blob([pdfBytes], { type: 'application/pdf' });
+    const url  = URL.createObjectURL(blob);
+    const a    = document.createElement('a');
+    a.href = url;
+    a.download = `ClaimForge-${state.title.replace(/[^a-z0-9]/gi,'_').slice(0,40)}.pdf`;
+    a.click();
+    URL.revokeObjectURL(url);
+
+    btn.textContent = '✓ PDF Downloaded!';
+    btn.style.borderColor = '#6fcf97';
+    btn.style.color = '#6fcf97';
+    setTimeout(() => {
+      btn.disabled = false;
+      btn.textContent = '⬇ Export PDF';
+      btn.style.borderColor = '';
+      btn.style.color = '';
+    }, 2500);
+
+  } catch(err) {
+    console.error('PDF export error:', err);
+    btn.disabled = false;
+    btn.textContent = '⬇ Export PDF';
+    alert('PDF export failed: ' + err.message);
+  }
+}
+
+
 let priorArtInterval;
 
 function resetPriorArt() {
@@ -857,7 +1119,7 @@ function renderPriorArtResults(result) {
 
   (result.conflicts || []).forEach(conflict => {
     const query = encodeURIComponent(conflict.usptoQuery || '');
-    const usptoUrl = `https://ppubs.uspto.gov/pubwebapp/static/pages/ppubsbasic.html?query=${query}`;
+    const usptoUrl = `https://patents.google.com/?q=${query}`;
     const keywords = (conflict.keywords || []).map(k => `<span class="conflict-keyword">${sanitize(k)}</span>`).join('');
     html += `
       <div class="conflict-card">
@@ -868,7 +1130,7 @@ function renderPriorArtResults(result) {
         <div class="conflict-reason">${sanitize(conflict.reason || '')}</div>
         <div class="conflict-keywords">${keywords}</div>
         <a class="uspto-link" href="${usptoUrl}" target="_blank" rel="noopener">
-          🔎 Search USPTO: "${sanitize(conflict.usptoQuery || '')}"
+          🔎 Search Google Patents: "${sanitize(conflict.usptoQuery || '')}"
         </a>
       </div>
     `;
